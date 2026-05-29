@@ -1,0 +1,23 @@
+# Node
+node_modules/
+dist/
+*.log
+
+# Env / secrets — never commit
+.env
+**/.env
+
+# Flutter / Dart
+app/.dart_tool/
+app/.flutter-plugins
+app/.flutter-plugins-dependencies
+app/build/
+app/.idea/
+app/*.iml
+app/.packages
+app/pubspec.lock
+
+# OS / editor
+.DS_Store
+.vscode/
+coverage/

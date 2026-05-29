@@ -57,49 +57,49 @@ curl -s -X POST http://localhost:8080/analyze-file -F "audio=@some.wav;type=audi
 
 ## 2. App (Flutter)
 
-The Flutter source lives in `app/lib`. Native platform folders are **not**
-checked in — generate them once, then run.
+The full Flutter project (incl. `android/` and `ios/` with mic permissions) is
+checked in. Requires Flutter 3.44+.
 
 ```bash
 cd app
-flutter create --platforms=android,ios .   # one-time: add android/ & ios/ folders
 flutter pub get
-flutter analyze
-flutter test                               # model + widget tests (no device needed)
+flutter analyze     # clean
+flutter test        # model + widget tests (no device needed)
+
+# Run on a device/emulator (no API keys in the app — only a backend URL):
+flutter run
 ```
 
-Add the microphone permission to the generated native projects:
+The backend URL is **configured at runtime** — on the home screen tap the
+**Backend** chip and enter your backend's WebSocket base (it's saved on device):
 
-- **Android** — `android/app/src/main/AndroidManifest.xml`, inside `<manifest>`:
-  ```xml
-  <uses-permission android:name="android.permission.RECORD_AUDIO" />
-  <uses-permission android:name="android.permission.INTERNET" />
-  ```
-- **iOS** — `ios/Runner/Info.plist`:
-  ```xml
-  <key>NSMicrophoneUsageDescription</key>
-  <string>EmotionCall analyzes the live conversation to show realtime emotion.</string>
-  ```
+- Android emulator → `ws://10.0.2.2:8080` (the default; reaches your host machine)
+- Physical device → `ws://<your-computer-LAN-ip>:8080`
 
-Run on a device/emulator, pointing at your backend:
+## 3. Get the APK
 
-```bash
-# Android emulator reaches the host machine at 10.0.2.2
-flutter run --dart-define=BACKEND_URL=ws://10.0.2.2:8080
+Every push to the feature branch (and the **Build APK** workflow under the
+repo's Actions tab, via *Run workflow*) builds a debug-signed release APK and
+publishes it two ways:
 
-# Physical device: use your computer's LAN IP
-flutter run --dart-define=BACKEND_URL=ws://192.168.1.50:8080
-```
+- **Release:** the `apk-latest` pre-release on the repo's Releases page —
+  direct download link for `emotioncall.apk`.
+- **Artifact:** `emotioncall-apk` attached to the workflow run.
 
-The app holds **no API keys** — only the backend URL.
+Sideload it on Android (enable "install from unknown sources"), then set your
+backend URL via the **Backend** chip as above.
 
-## 3. Try it
+> The APK is built in CI because Android's SDK/Gradle servers (`dl.google.com`,
+> `maven.google.com`) are required and may be blocked in restricted dev
+> environments; GitHub-hosted runners have the open network access needed.
 
-1. Start the backend (stub mode is fine).
-2. Launch the app → **Start live call**, grant mic permission, and talk (phone
-   on speaker works well for two voices). Watch the transcript, per-speaker
-   emotion meters, the live timeline, and AI recommendations. Tap **End &
-   Analyze** for the post-call report.
+## 4. Try it
+
+1. Start the backend (stub mode is fine — no keys needed).
+2. Launch the app → set the **Backend** URL → **Start live call**, grant mic
+   permission, and talk (phone on speaker works well for two voices). Watch the
+   transcript, per-speaker emotion meters, the live timeline, and AI
+   recommendations. Tap **End & Analyze** for the post-call report.
 3. Or tap **Import a recording** to analyze an existing audio file.
 
 ## Privacy & legal

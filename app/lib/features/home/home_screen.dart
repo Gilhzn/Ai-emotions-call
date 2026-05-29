@@ -2,12 +2,13 @@ import 'package:file_picker/file_picker.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
-import '../../config/env.dart';
+import '../../config/backend_config.dart';
 import '../../services/file_analysis_service.dart';
 import '../call/call_screen.dart';
 import '../postcall/post_call_screen.dart';
 
-/// Entry screen: start a live call or import a recorded conversation.
+/// Entry screen: start a live call or import a recorded conversation. Also lets
+/// the user point the app at any backend at runtime (no rebuild required).
 class HomeScreen extends ConsumerStatefulWidget {
   const HomeScreen({super.key});
 
@@ -17,6 +18,42 @@ class HomeScreen extends ConsumerStatefulWidget {
 
 class _HomeScreenState extends ConsumerState<HomeScreen> {
   bool _analyzing = false;
+
+  @override
+  void initState() {
+    super.initState();
+    WidgetsBinding.instance.addPostFrameCallback((_) => loadBackendUrl(ref));
+  }
+
+  Future<void> _editBackend() async {
+    final current = ref.read(backendUrlProvider);
+    final controller = TextEditingController(text: current);
+    final result = await showDialog<String>(
+      context: context,
+      builder: (ctx) => AlertDialog(
+        title: const Text('Backend URL'),
+        content: TextField(
+          controller: controller,
+          autofocus: true,
+          decoration: const InputDecoration(
+            hintText: 'ws://192.168.1.50:8080',
+            helperText: 'WebSocket base of your backend (no /call)',
+          ),
+        ),
+        actions: [
+          TextButton(
+              onPressed: () => Navigator.pop(ctx), child: const Text('Cancel')),
+          FilledButton(
+            onPressed: () => Navigator.pop(ctx, controller.text),
+            child: const Text('Save'),
+          ),
+        ],
+      ),
+    );
+    if (result != null && result.trim().isNotEmpty) {
+      await saveBackendUrl(ref, result);
+    }
+  }
 
   Future<void> _importRecording() async {
     final picked = await FilePicker.platform.pickFiles(
@@ -28,7 +65,8 @@ class _HomeScreenState extends ConsumerState<HomeScreen> {
 
     setState(() => _analyzing = true);
     try {
-      final result = await FileAnalysisService()
+      final base = ref.read(backendUrlProvider);
+      final result = await FileAnalysisService(BackendUrls(base).analyzeFile)
           .analyze(path: path, filename: picked!.files.single.name);
       if (!mounted) return;
       Navigator.of(context).push(
@@ -48,6 +86,7 @@ class _HomeScreenState extends ConsumerState<HomeScreen> {
 
   @override
   Widget build(BuildContext context) {
+    final backendUrl = ref.watch(backendUrlProvider);
     return Scaffold(
       body: SafeArea(
         child: Padding(
@@ -93,9 +132,12 @@ class _HomeScreenState extends ConsumerState<HomeScreen> {
                 label: Text(_analyzing ? 'Analyzing…' : 'Import a recording'),
               ),
               const Spacer(),
-              Text('Backend: ${Env.backendUrl}',
-                  textAlign: TextAlign.center,
-                  style: const TextStyle(color: Colors.white24, fontSize: 11)),
+              TextButton.icon(
+                onPressed: _editBackend,
+                icon: const Icon(Icons.settings, size: 16),
+                label: Text('Backend: $backendUrl',
+                    style: const TextStyle(fontSize: 12)),
+              ),
             ],
           ),
         ),

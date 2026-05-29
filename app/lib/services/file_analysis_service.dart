@@ -2,7 +2,6 @@ import 'dart:convert';
 
 import 'package:http/http.dart' as http;
 
-import '../config/env.dart';
 import '../core/models/emotion_frame.dart';
 import '../core/models/insight.dart';
 import '../core/models/post_call_report.dart';
@@ -46,11 +45,16 @@ class FileAnalysisResult {
 
 /// Uploads a recorded audio file to the backend for batch analysis.
 class FileAnalysisService {
+  const FileAnalysisService(this.analyzeFileUrl);
+
+  /// Full URL of the backend's POST /analyze-file endpoint.
+  final String analyzeFileUrl;
+
   Future<FileAnalysisResult> analyze({
     required String path,
     required String filename,
   }) async {
-    final request = http.MultipartRequest('POST', Uri.parse(Env.analyzeFileUrl))
+    final request = http.MultipartRequest('POST', Uri.parse(analyzeFileUrl))
       ..files.add(await http.MultipartFile.fromPath('audio', path, filename: filename));
 
     final streamed = await request.send();

@@ -1,0 +1,89 @@
+name: Build APK
+
+# Builds the EmotionCall AI Android APK on a GitHub runner (which has the open
+# network access needed for the Android SDK + Gradle/Maven), then publishes it
+# as both a workflow artifact and a downloadable pre-release.
+on:
+  push:
+    branches: [claude/emotionCall-ai-design-hQ5zw]
+    paths: ["app/**", ".github/workflows/build-apk.yml"]
+  workflow_dispatch:
+
+permissions:
+  contents: write
+
+jobs:
+  backend-tests:
+    runs-on: ubuntu-latest
+    defaults:
+      run:
+        working-directory: backend
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: "22"
+          cache: npm
+          cache-dependency-path: backend/package-lock.json
+      - run: npm ci
+      - run: npm run typecheck
+      - run: npm test
+
+  build-apk:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-java@v4
+        with:
+          distribution: temurin
+          java-version: "17"
+
+      - uses: subosito/flutter-action@v2
+        with:
+          flutter-version: "3.44.0"
+          channel: stable
+          cache: true
+
+      - name: Flutter pub get
+        working-directory: app
+        run: flutter pub get
+
+      - name: Analyze
+        working-directory: app
+        run: flutter analyze
+
+      - name: Test
+        working-directory: app
+        run: flutter test
+
+      - name: Build release APK
+        working-directory: app
+        run: flutter build apk --release
+
+      - name: Rename APK
+        working-directory: app
+        run: cp build/app/outputs/flutter-apk/app-release.apk emotioncall.apk
+
+      - name: Upload artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: emotioncall-apk
+          path: app/emotioncall.apk
+          if-no-files-found: error
+
+      - name: Publish pre-release with APK
+        uses: softprops/action-gh-release@v2
+        with:
+          tag_name: apk-latest
+          name: EmotionCall AI — latest APK
+          prerelease: true
+          body: |
+            Debug-signed release APK built from
+            `${{ github.sha }}`.
+
+            Install by sideloading on Android (enable "install from unknown
+            sources"). On first launch, tap the **Backend** chip at the bottom
+            of the home screen and set your backend URL
+            (e.g. `ws://<your-LAN-ip>:8080`).
+          files: app/emotioncall.apk

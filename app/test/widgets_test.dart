@@ -50,6 +50,12 @@ void main() {
 
   testWidgets('PostCallScreen renders scores, summary and sections',
       (tester) async {
+    // Tall viewport so the lazy ListView builds the summary + sections too.
+    tester.view.physicalSize = const Size(1200, 3000);
+    tester.view.devicePixelRatio = 1.0;
+    addTearDown(tester.view.resetPhysicalSize);
+    addTearDown(tester.view.resetDevicePixelRatio);
+
     const report = PostCallReport(
       summary: 'Solid call with a price objection.',
       scores: ReportScores(
@@ -69,7 +75,8 @@ void main() {
             t: 10, trust: 60, stress: 30, dominance: 50, emotionDominant: 'positive'),
       ],
     );
-    await tester.pumpWidget(MaterialApp(home: PostCallScreen(report: report)));
+    await tester.pumpWidget(
+        const MaterialApp(home: PostCallScreen(report: report)));
     expect(find.text('78'), findsOneWidget);
     expect(find.text('67%'), findsOneWidget);
     expect(find.text('Solid call with a price objection.'), findsOneWidget);

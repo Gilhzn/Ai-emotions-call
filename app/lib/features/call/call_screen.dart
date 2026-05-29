@@ -155,14 +155,14 @@ class _StatusChip extends StatelessWidget {
   Widget build(BuildContext context) {
     final (label, color) = switch (state) {
       SessionState.connected => ('Connected', Colors.blueGrey),
-      SessionState.listening => ('● Listening', Color(0xFF2ECC71)),
-      SessionState.analyzing => ('Analyzing…', Color(0xFFE67E22)),
+      SessionState.listening => ('● Listening', const Color(0xFF2ECC71)),
+      SessionState.analyzing => ('Analyzing…', const Color(0xFFE67E22)),
       SessionState.stopped => ('Ended', Colors.grey),
     };
     return Container(
       padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 3),
       decoration: BoxDecoration(
-        color: color.withOpacity(0.2),
+        color: color.withValues(alpha: 0.2),
         borderRadius: BorderRadius.circular(10),
       ),
       child: Text(label,

@@ -76,9 +76,9 @@ class _Legend extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    return Row(
+    return const Row(
       mainAxisAlignment: MainAxisAlignment.center,
-      children: const [
+      children: [
         _Dot(color: EmotionTimeline.trustColor, label: 'Trust'),
         SizedBox(width: 12),
         _Dot(color: EmotionTimeline.stressColor, label: 'Stress'),

@@ -1,4 +1,4 @@
-/// Mirrors the post-call report types in backend/src/contract.ts.
+// Mirrors the post-call report types in backend/src/contract.ts.
 
 class ReportScores {
   const ReportScores({

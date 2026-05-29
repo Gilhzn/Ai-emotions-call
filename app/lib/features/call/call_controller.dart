@@ -8,6 +8,7 @@ import '../../core/models/insight.dart';
 import '../../core/models/post_call_report.dart';
 import '../../core/models/speaker.dart';
 import '../../core/models/transcript_segment.dart';
+import '../../config/backend_config.dart';
 import '../../core/ws/call_client.dart';
 import '../../core/ws/server_message.dart';
 import '../../services/audio_capture.dart';
@@ -131,9 +132,12 @@ class CallController extends ChangeNotifier {
 }
 
 /// Provider for the live-call controller. Auto-disposed when the screen leaves.
+/// Uses the runtime-configured backend URL so no rebuild is needed to retarget.
 final callControllerProvider =
     ChangeNotifierProvider.autoDispose<CallController>((ref) {
-  final controller = CallController();
+  final base = ref.watch(backendUrlProvider);
+  final controller =
+      CallController(client: CallClient(url: BackendUrls(base).callWs));
   ref.onDispose(controller.dispose);
   return controller;
 });

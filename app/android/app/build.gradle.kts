@@ -6,7 +6,9 @@ plugins {
 
 android {
     namespace = "com.emotioncall.emotioncall"
-    compileSdk = flutter.compileSdkVersion
+    // Some plugins (flutter_plugin_android_lifecycle, file_picker) require
+    // compiling against Android API 36+.
+    compileSdk = 36
     // Pin the NDK version the plugins (record/just_audio/etc.) require.
     ndkVersion = "28.2.13676358"
 

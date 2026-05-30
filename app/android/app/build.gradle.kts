@@ -7,11 +7,15 @@ plugins {
 android {
     namespace = "com.emotioncall.emotioncall"
     compileSdk = flutter.compileSdkVersion
-    ndkVersion = flutter.ndkVersion
+    // Pin a recent NDK that satisfies the audio plugins (record/just_audio),
+    // which require a newer NDK than Flutter's default on some channels.
+    ndkVersion = "27.0.12077973"
 
     compileOptions {
         sourceCompatibility = JavaVersion.VERSION_17
         targetCompatibility = JavaVersion.VERSION_17
+        // Some plugins use Java 8+ APIs that need desugaring on minSdk < 26.
+        isCoreLibraryDesugaringEnabled = true
     }
 
     defaultConfig {
@@ -43,4 +47,8 @@ kotlin {
 
 flutter {
     source = "../.."
+}
+
+dependencies {
+    coreLibraryDesugaring("com.android.tools:desugar_jdk_libs:2.1.4")
 }

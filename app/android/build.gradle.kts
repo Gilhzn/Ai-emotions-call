@@ -22,11 +22,18 @@ subprojects {
 // Some plugins (e.g. file_picker) hardcode an older compileSdk, but newer
 // transitive deps (flutter_plugin_android_lifecycle) require consumers to
 // compile against API 36+. Force every Android library module to compileSdk 36.
+// Guard against projects already evaluated (e.g. :app, pulled in early by the
+// evaluationDependsOn above), where afterEvaluate would throw.
 subprojects {
-    afterEvaluate {
+    val forceCompileSdk: () -> Unit = {
         extensions.findByType(com.android.build.api.dsl.LibraryExtension::class.java)?.let {
             it.compileSdk = 36
         }
+    }
+    if (state.executed) {
+        forceCompileSdk()
+    } else {
+        afterEvaluate { forceCompileSdk() }
     }
 }
 

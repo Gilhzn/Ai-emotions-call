@@ -7,9 +7,8 @@ plugins {
 android {
     namespace = "com.emotioncall.emotioncall"
     compileSdk = flutter.compileSdkVersion
-    // Pin a recent NDK that satisfies the audio plugins (record/just_audio),
-    // which require a newer NDK than Flutter's default on some channels.
-    ndkVersion = "27.0.12077973"
+    // Pin the NDK version the plugins (record/just_audio/etc.) require.
+    ndkVersion = "28.2.13676358"
 
     compileOptions {
         sourceCompatibility = JavaVersion.VERSION_17

@@ -11,10 +11,14 @@ import 'widgets/recommendation_feed.dart';
 import 'widgets/transcript_view.dart';
 
 /// The live call experience: two-speaker emotion meters, a realtime timeline,
-/// AI recommendations and a live transcript. Starts capturing on open and
-/// navigates to the post-call report when the call ends.
+/// AI recommendations and a live transcript. Starts on open ([demo] runs the
+/// fully on-device simulation; otherwise it captures the mic and streams to the
+/// backend) and navigates to the post-call report when the call ends.
 class CallScreen extends ConsumerStatefulWidget {
-  const CallScreen({super.key});
+  const CallScreen({super.key, this.demo = false});
+
+  /// When true, runs the on-device demo instead of a real backend call.
+  final bool demo;
 
   @override
   ConsumerState<CallScreen> createState() => _CallScreenState();
@@ -27,13 +31,14 @@ class _CallScreenState extends ConsumerState<CallScreen> {
   void initState() {
     super.initState();
     WidgetsBinding.instance.addPostFrameCallback((_) async {
-      final started = await ref.read(callControllerProvider).startLiveCall();
+      final controller = ref.read(callControllerProvider);
+      final started = widget.demo
+          ? await controller.startDemoCall()
+          : await controller.startLiveCall();
       if (!started && mounted) {
         ScaffoldMessenger.of(context).showSnackBar(
           SnackBar(
-            content: Text(
-              ref.read(callControllerProvider).error ?? 'Could not start call',
-            ),
+            content: Text(controller.error ?? 'לא ניתן להתחיל שיחה'),
           ),
         );
       }
@@ -62,25 +67,26 @@ class _CallScreenState extends ConsumerState<CallScreen> {
         appBar: AppBar(
           title: Row(
             children: [
-              const Text('Live Call'),
+              Text(widget.demo ? 'הדגמה חיה' : 'שיחה חיה'),
               const SizedBox(width: 10),
               _StatusChip(state: controller.status),
             ],
           ),
           actions: [
-            IconButton(
-              tooltip: 'Swap speakers',
-              icon: const Icon(Icons.swap_horiz),
-              onPressed: controller.isActive ? controller.swapSpeakers : null,
-            ),
+            if (!widget.demo)
+              IconButton(
+                tooltip: 'החלף דוברים',
+                icon: const Icon(Icons.swap_horiz),
+                onPressed: controller.isActive ? controller.swapSpeakers : null,
+              ),
           ],
           bottom: const TabBar(
-            tabs: [Tab(text: 'Pulse'), Tab(text: 'Transcript')],
+            tabs: [Tab(text: 'דופק'), Tab(text: 'תמלול')],
           ),
         ),
         body: TabBarView(
           children: [
-            _PulseTab(controller: controller),
+            _PulseTab(controller: controller, demo: widget.demo),
             TranscriptView(
               finalSegments: controller.finalSegments,
               interim: controller.interim,
@@ -92,7 +98,7 @@ class _CallScreenState extends ConsumerState<CallScreen> {
                 backgroundColor: const Color(0xFFE74C3C),
                 onPressed: () => controller.stopCall(),
                 icon: const Icon(Icons.stop),
-                label: const Text('End & Analyze'),
+                label: const Text('סיים ונתח'),
               )
             : null,
       ),
@@ -101,8 +107,9 @@ class _CallScreenState extends ConsumerState<CallScreen> {
 }
 
 class _PulseTab extends StatelessWidget {
-  const _PulseTab({required this.controller});
+  const _PulseTab({required this.controller, required this.demo});
   final CallController controller;
+  final bool demo;
 
   @override
   Widget build(BuildContext context) {
@@ -111,6 +118,18 @@ class _PulseTab extends StatelessWidget {
       padding: const EdgeInsets.all(12),
       child: Column(
         children: [
+          if (demo)
+            const _Banner(
+              color: Color(0xFF5B8DEF),
+              icon: Icons.play_circle_outline,
+              text: 'מצב הדגמה — נתונים מדומים רצים על המכשיר, ללא שרת.',
+            ),
+          if (controller.error != null)
+            _Banner(
+              color: const Color(0xFFE74C3C),
+              icon: Icons.error_outline,
+              text: controller.error!,
+            ),
           Row(
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
@@ -147,6 +166,35 @@ class _PulseTab extends StatelessWidget {
   }
 }
 
+class _Banner extends StatelessWidget {
+  const _Banner({required this.color, required this.icon, required this.text});
+  final Color color;
+  final IconData icon;
+  final String text;
+
+  @override
+  Widget build(BuildContext context) {
+    return Container(
+      margin: const EdgeInsets.only(bottom: 12),
+      padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 10),
+      decoration: BoxDecoration(
+        color: color.withValues(alpha: 0.15),
+        borderRadius: BorderRadius.circular(10),
+        border: Border.all(color: color.withValues(alpha: 0.5)),
+      ),
+      child: Row(
+        children: [
+          Icon(icon, color: color, size: 18),
+          const SizedBox(width: 8),
+          Expanded(
+            child: Text(text, style: TextStyle(color: color, fontSize: 12)),
+          ),
+        ],
+      ),
+    );
+  }
+}
+
 class _StatusChip extends StatelessWidget {
   const _StatusChip({required this.state});
   final SessionState state;
@@ -154,10 +202,10 @@ class _StatusChip extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final (label, color) = switch (state) {
-      SessionState.connected => ('Connected', Colors.blueGrey),
-      SessionState.listening => ('● Listening', const Color(0xFF2ECC71)),
-      SessionState.analyzing => ('Analyzing…', const Color(0xFFE67E22)),
-      SessionState.stopped => ('Ended', Colors.grey),
+      SessionState.connected => ('מחובר', Colors.blueGrey),
+      SessionState.listening => ('● מקשיב', const Color(0xFF2ECC71)),
+      SessionState.analyzing => ('מנתח…', const Color(0xFFE67E22)),
+      SessionState.stopped => ('הסתיים', Colors.grey),
     };
     return Container(
       padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 3),

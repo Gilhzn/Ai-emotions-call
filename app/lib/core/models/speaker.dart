@@ -5,7 +5,7 @@ enum Speaker {
 
   String get wire => this == Speaker.a ? 'A' : 'B';
 
-  String get label => this == Speaker.a ? 'Rep (A)' : 'Customer (B)';
+  String get label => this == Speaker.a ? 'נציג (A)' : 'לקוח (B)';
 
   static Speaker fromWire(String? s) => s == 'B' ? Speaker.b : Speaker.a;
 }

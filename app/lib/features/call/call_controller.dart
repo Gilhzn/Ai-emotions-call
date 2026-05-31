@@ -12,6 +12,7 @@ import '../../config/backend_config.dart';
 import '../../core/ws/call_client.dart';
 import '../../core/ws/server_message.dart';
 import '../../services/audio_capture.dart';
+import 'demo_session.dart';
 
 /// Drives a live call: mic -> backend -> realtime events, accumulating the
 /// transcript, per-speaker emotion state + history, insights, and the final
@@ -26,9 +27,11 @@ class CallController extends ChangeNotifier {
 
   StreamSubscription<ServerMessage>? _msgSub;
   StreamSubscription<dynamic>? _audioSub;
+  Timer? _demoTimer;
 
   SessionState status = SessionState.connected;
   bool isActive = false;
+  bool isDemo = false;
   String? error;
 
   final List<TranscriptSegment> finalSegments = [];
@@ -41,13 +44,39 @@ class CallController extends ChangeNotifier {
 
   PostCallReport? report;
 
+  /// Start a fully on-device simulated call — drives the live UI with scripted
+  /// Hebrew dialogue and evolving emotions. No backend, network, or mic needed.
+  Future<bool> startDemoCall() async {
+    if (isActive) return true;
+    _reset();
+    isDemo = true;
+    isActive = true;
+    status = SessionState.listening;
+    notifyListeners();
+
+    final script = buildDemoScript();
+    var i = 0;
+    _demoTimer = Timer.periodic(const Duration(milliseconds: 2200), (_) {
+      if (i >= script.length) {
+        stopCall();
+        return;
+      }
+      final ev = script[i++];
+      _onMessage(TranscriptEvent(ev.segment));
+      _onMessage(EmotionEvent(ev.frame));
+      final insight = ev.insight;
+      if (insight != null) _onMessage(InsightEvent(insight));
+    });
+    return true;
+  }
+
   /// Start a live microphone call. Returns false if mic permission was denied.
   Future<bool> startLiveCall() async {
     if (isActive) return true;
     _reset();
 
     if (!await _capture.hasPermission()) {
-      error = 'Microphone permission denied';
+      error = 'הרשאת מיקרופון נדחתה';
       notifyListeners();
       return false;
     }
@@ -55,7 +84,7 @@ class CallController extends ChangeNotifier {
     try {
       await _client.connect();
     } catch (e) {
-      error = 'Could not reach backend: $e';
+      error = 'לא ניתן להתחבר לשרת: $e';
       notifyListeners();
       return false;
     }
@@ -74,6 +103,17 @@ class CallController extends ChangeNotifier {
 
   Future<void> stopCall() async {
     if (!isActive) return;
+    if (isDemo) {
+      _demoTimer?.cancel();
+      _demoTimer = null;
+      isActive = false;
+      status = SessionState.analyzing;
+      notifyListeners();
+      report = buildDemoReport([...historyA, ...historyB]);
+      status = SessionState.stopped;
+      notifyListeners();
+      return;
+    }
     await _audioSub?.cancel();
     _audioSub = null;
     await _capture.stop();
@@ -123,6 +163,7 @@ class CallController extends ChangeNotifier {
 
   @override
   void dispose() {
+    _demoTimer?.cancel();
     _audioSub?.cancel();
     _msgSub?.cancel();
     _capture.dispose();

@@ -7,8 +7,9 @@ import '../../services/file_analysis_service.dart';
 import '../call/call_screen.dart';
 import '../postcall/post_call_screen.dart';
 
-/// Entry screen: start a live call or import a recorded conversation. Also lets
-/// the user point the app at any backend at runtime (no rebuild required).
+/// Entry screen: try the on-device demo, start a live call (needs a backend),
+/// or import a recording. Also lets the user point the app at any backend at
+/// runtime (no rebuild required).
 class HomeScreen extends ConsumerStatefulWidget {
   const HomeScreen({super.key});
 
@@ -31,21 +32,22 @@ class _HomeScreenState extends ConsumerState<HomeScreen> {
     final result = await showDialog<String>(
       context: context,
       builder: (ctx) => AlertDialog(
-        title: const Text('Backend URL'),
+        title: const Text('כתובת השרת'),
         content: TextField(
           controller: controller,
           autofocus: true,
+          textDirection: TextDirection.ltr,
           decoration: const InputDecoration(
             hintText: 'ws://192.168.1.50:8080',
-            helperText: 'WebSocket base of your backend (no /call)',
+            helperText: 'כתובת ה‑WebSocket של השרת (ללא ‎/call)',
           ),
         ),
         actions: [
           TextButton(
-              onPressed: () => Navigator.pop(ctx), child: const Text('Cancel')),
+              onPressed: () => Navigator.pop(ctx), child: const Text('ביטול')),
           FilledButton(
             onPressed: () => Navigator.pop(ctx, controller.text),
-            child: const Text('Save'),
+            child: const Text('שמירה'),
           ),
         ],
       ),
@@ -77,11 +79,17 @@ class _HomeScreenState extends ConsumerState<HomeScreen> {
     } catch (e) {
       if (mounted) {
         ScaffoldMessenger.of(context)
-            .showSnackBar(SnackBar(content: Text('Import failed: $e')));
+            .showSnackBar(SnackBar(content: Text('הייבוא נכשל: $e')));
       }
     } finally {
       if (mounted) setState(() => _analyzing = false);
     }
+  }
+
+  void _openCall({required bool demo}) {
+    Navigator.of(context).push(
+      MaterialPageRoute(builder: (_) => CallScreen(demo: demo)),
+    );
   }
 
   @override
@@ -99,23 +107,26 @@ class _HomeScreenState extends ConsumerState<HomeScreen> {
               const SizedBox(height: 16),
               const Text('EmotionCall AI',
                   textAlign: TextAlign.center,
-                  style:
-                      TextStyle(fontSize: 28, fontWeight: FontWeight.bold)),
+                  style: TextStyle(fontSize: 28, fontWeight: FontWeight.bold)),
               const SizedBox(height: 4),
-              const Text('Realtime emotion & intent for your calls',
+              const Text('ניתוח רגשות וכוונות בזמן אמת לשיחות שלך',
                   textAlign: TextAlign.center,
                   style: TextStyle(color: Colors.white60)),
               const SizedBox(height: 40),
               FilledButton.icon(
-                onPressed: _analyzing
-                    ? null
-                    : () => Navigator.of(context).push(
-                          MaterialPageRoute(builder: (_) => const CallScreen()),
-                        ),
+                onPressed: _analyzing ? null : () => _openCall(demo: true),
                 style: FilledButton.styleFrom(
                     padding: const EdgeInsets.symmetric(vertical: 18)),
+                icon: const Icon(Icons.play_circle_outline),
+                label: const Text('הדגמה חיה (על המכשיר)'),
+              ),
+              const SizedBox(height: 12),
+              OutlinedButton.icon(
+                onPressed: _analyzing ? null : () => _openCall(demo: false),
+                style: OutlinedButton.styleFrom(
+                    padding: const EdgeInsets.symmetric(vertical: 18)),
                 icon: const Icon(Icons.mic),
-                label: const Text('Start live call'),
+                label: const Text('שיחה חיה (דורש שרת)'),
               ),
               const SizedBox(height: 12),
               OutlinedButton.icon(
@@ -129,13 +140,14 @@ class _HomeScreenState extends ConsumerState<HomeScreen> {
                         child: CircularProgressIndicator(strokeWidth: 2),
                       )
                     : const Icon(Icons.upload_file),
-                label: Text(_analyzing ? 'Analyzing…' : 'Import a recording'),
+                label: Text(_analyzing ? 'מנתח…' : 'ייבוא הקלטה (דורש שרת)'),
               ),
               const Spacer(),
               TextButton.icon(
                 onPressed: _editBackend,
                 icon: const Icon(Icons.settings, size: 16),
-                label: Text('Backend: $backendUrl',
+                label: Text('שרת: $backendUrl',
+                    textDirection: TextDirection.ltr,
                     style: const TextStyle(fontSize: 12)),
               ),
             ],

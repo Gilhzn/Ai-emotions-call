@@ -48,7 +48,7 @@ class _TranscriptViewState extends State<TranscriptView> {
     final total = widget.finalSegments.length + interimRows.length;
     if (total == 0) {
       return const Center(
-        child: Text('Transcript will appear here…',
+        child: Text('התמלול יופיע כאן…',
             style: TextStyle(color: Colors.white38)),
       );
     }

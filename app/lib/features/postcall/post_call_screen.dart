@@ -16,7 +16,7 @@ class PostCallScreen extends StatelessWidget {
     final s = report.scores;
     return Scaffold(
       appBar: AppBar(
-        title: const Text('Call Analysis'),
+        title: const Text('ניתוח השיחה'),
         actions: [
           IconButton(
             icon: const Icon(Icons.home_outlined),
@@ -36,22 +36,22 @@ class PostCallScreen extends StatelessWidget {
             mainAxisSpacing: 12,
             crossAxisSpacing: 12,
             children: [
-              _ScoreGauge(label: 'Seller Score', value: s.sellerScore),
-              _ScoreGauge(label: 'Customer Emotion', value: s.customerEmotion),
-              _ScoreGauge(label: 'Trust Level', value: s.trustLevel),
+              _ScoreGauge(label: 'ציון המוכר', value: s.sellerScore),
+              _ScoreGauge(label: 'רגש הלקוח', value: s.customerEmotion),
+              _ScoreGauge(label: 'רמת אמון', value: s.trustLevel),
               _ScoreGauge(
-                  label: 'Conversion', value: s.conversionProbability, suffix: '%'),
+                  label: 'סיכוי סגירה', value: s.conversionProbability, suffix: '%'),
             ],
           ),
           const SizedBox(height: 16),
           _SectionCard(
-            title: 'Summary',
+            title: 'סיכום',
             child: Text(report.summary,
                 style: const TextStyle(height: 1.4)),
           ),
           if (report.sections.isNotEmpty)
             _SectionCard(
-              title: 'By section',
+              title: 'לפי שלבים',
               child: Column(
                 children: [
                   for (final sec in report.sections)
@@ -68,7 +68,7 @@ class PostCallScreen extends StatelessWidget {
             ),
           if (report.events.isNotEmpty)
             _SectionCard(
-              title: 'Detected events',
+              title: 'אירועים שזוהו',
               child: Column(
                 children: [
                   for (final e in report.events)
@@ -85,7 +85,7 @@ class PostCallScreen extends StatelessWidget {
             ),
           if (report.timeline.length >= 2)
             _SectionCard(
-              title: 'Emotion timeline',
+              title: 'ציר הרגשות',
               child: SizedBox(
                   height: 200, child: _ReportTimeline(points: report.timeline)),
             ),

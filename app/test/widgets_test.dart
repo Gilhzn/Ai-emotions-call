@@ -15,8 +15,8 @@ void main() {
     await tester.pumpWidget(
       _wrap(const EmotionMeter(speaker: Speaker.a, frame: null)),
     );
-    expect(find.text('Rep (A)'), findsOneWidget);
-    expect(find.text('Listening…'), findsOneWidget);
+    expect(find.text('נציג (A)'), findsOneWidget);
+    expect(find.text('מקשיב…'), findsOneWidget);
   });
 
   testWidgets('EmotionMeter renders scores, dimensions and intent',
@@ -42,9 +42,9 @@ void main() {
       _wrap(const EmotionMeter(speaker: Speaker.b, frame: frame)),
     );
     await tester.pump(const Duration(milliseconds: 500));
-    expect(find.text('Customer (B)'), findsOneWidget);
-    expect(find.text('positive'), findsOneWidget);
-    expect(find.text('Intent: evaluating fit'), findsOneWidget);
+    expect(find.text('לקוח (B)'), findsOneWidget);
+    expect(find.text('חיובי'), findsOneWidget);
+    expect(find.text('כוונה: evaluating fit'), findsOneWidget);
     expect(find.text('65'), findsWidgets); // trust dimension
   });
 

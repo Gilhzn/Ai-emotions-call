@@ -19,7 +19,7 @@ class EmotionTimeline extends StatelessWidget {
   Widget build(BuildContext context) {
     if (frames.length < 2) {
       return const Center(
-        child: Text('Emotion timeline builds as the call progresses…',
+        child: Text('ציר הרגשות נבנה ככל שהשיחה מתקדמת…',
             style: TextStyle(color: Colors.white38)),
       );
     }
@@ -79,11 +79,11 @@ class _Legend extends StatelessWidget {
     return const Row(
       mainAxisAlignment: MainAxisAlignment.center,
       children: [
-        _Dot(color: EmotionTimeline.trustColor, label: 'Trust'),
+        _Dot(color: EmotionTimeline.trustColor, label: 'אמון'),
         SizedBox(width: 12),
-        _Dot(color: EmotionTimeline.stressColor, label: 'Stress'),
+        _Dot(color: EmotionTimeline.stressColor, label: 'לחץ'),
         SizedBox(width: 12),
-        _Dot(color: EmotionTimeline.powerColor, label: 'Dominance'),
+        _Dot(color: EmotionTimeline.powerColor, label: 'שליטה'),
       ],
     );
   }

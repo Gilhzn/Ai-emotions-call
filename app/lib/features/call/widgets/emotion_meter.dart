@@ -40,23 +40,23 @@ class EmotionMeter extends StatelessWidget {
             if (scores == null)
               const Padding(
                 padding: EdgeInsets.symmetric(vertical: 16),
-                child: Text('Listening…',
+                child: Text('מקשיב…',
                     style: TextStyle(color: Colors.white54)),
               )
             else ...[
               for (final e in scores.entries)
-                _EmotionBar(label: e.key, value: e.value),
+                _EmotionBar(emotionKey: e.key, value: e.value),
               const SizedBox(height: 10),
               Row(
                 children: [
-                  _Dim(label: 'Trust', value: f!.trust),
-                  _Dim(label: 'Power', value: f.dominance),
-                  _Dim(label: 'Stress', value: f.stress),
+                  _Dim(label: 'אמון', value: f!.trust),
+                  _Dim(label: 'שליטה', value: f.dominance),
+                  _Dim(label: 'לחץ', value: f.stress),
                 ],
               ),
               if (f.intent.isNotEmpty) ...[
                 const SizedBox(height: 8),
-                Text('Intent: ${f.intent}',
+                Text('כוונה: ${f.intent}',
                     style: const TextStyle(
                         color: Colors.white70, fontStyle: FontStyle.italic)),
               ],
@@ -69,8 +69,8 @@ class EmotionMeter extends StatelessWidget {
 }
 
 class _EmotionBar extends StatelessWidget {
-  const _EmotionBar({required this.label, required this.value});
-  final String label;
+  const _EmotionBar({required this.emotionKey, required this.value});
+  final String emotionKey;
   final int value;
 
   @override
@@ -81,7 +81,7 @@ class _EmotionBar extends StatelessWidget {
         children: [
           SizedBox(
             width: 78,
-            child: Text(label,
+            child: Text(EmotionPalette.labelOf(emotionKey),
                 style: const TextStyle(fontSize: 11, color: Colors.white70)),
           ),
           Expanded(
@@ -95,7 +95,7 @@ class _EmotionBar extends StatelessWidget {
                   minHeight: 8,
                   backgroundColor: Colors.white10,
                   valueColor:
-                      AlwaysStoppedAnimation(EmotionPalette.of(label)),
+                      AlwaysStoppedAnimation(EmotionPalette.of(emotionKey)),
                 ),
               ),
             ),

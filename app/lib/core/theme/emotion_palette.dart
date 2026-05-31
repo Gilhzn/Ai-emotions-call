@@ -13,6 +13,20 @@ class EmotionPalette {
     'aggressive': Color(0xFFC0392B),
   };
 
+  /// Hebrew display names for the seven emotions (keys stay English for
+  /// color/emoji lookup and wire compatibility).
+  static const Map<String, String> labelHe = {
+    'positive': 'חיובי',
+    'angry': 'כועס',
+    'stressed': 'לחוץ',
+    'neutral': 'ניטרלי',
+    'disappointed': 'מאוכזב',
+    'suspicious': 'חשדן',
+    'aggressive': 'תוקפני',
+  };
+
+  static String labelOf(String emotion) => labelHe[emotion] ?? emotion;
+
   static const Map<String, String> emoji = {
     'positive': '😊',
     'angry': '😠',

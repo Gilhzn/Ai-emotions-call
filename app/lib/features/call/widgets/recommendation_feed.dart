@@ -14,7 +14,7 @@ class RecommendationFeed extends StatelessWidget {
       return const Card(
         child: ListTile(
           leading: Icon(Icons.lightbulb_outline, color: Colors.white38),
-          title: Text('AI recommendations will appear here',
+          title: Text('המלצות AI יופיעו כאן',
               style: TextStyle(color: Colors.white38)),
         ),
       );
@@ -28,7 +28,7 @@ class RecommendationFeed extends StatelessWidget {
               dense: true,
               leading: Icon(_icon(i.severity), color: _color(i.severity)),
               title: Text(i.text),
-              trailing: Text('${i.t.round()}s',
+              trailing: Text('${i.t.round()} שנ׳',
                   style: const TextStyle(color: Colors.white38, fontSize: 11)),
             ),
           ),

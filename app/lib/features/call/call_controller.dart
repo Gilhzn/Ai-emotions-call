@@ -12,6 +12,8 @@ import '../../config/backend_config.dart';
 import '../../core/ws/call_client.dart';
 import '../../core/ws/server_message.dart';
 import '../../services/audio_capture.dart';
+import '../../services/ondevice_analyzer.dart';
+import '../../services/speech_service.dart';
 import 'demo_session.dart';
 
 /// Drives a live call: mic -> backend -> realtime events, accumulating the
@@ -29,9 +31,19 @@ class CallController extends ChangeNotifier {
   StreamSubscription<dynamic>? _audioSub;
   Timer? _demoTimer;
 
+  // On-device (mic + device speech recognition + heuristic) session state.
+  SpeechService? _speech;
+  final OnDeviceAnalyzer _analyzer = OnDeviceAnalyzer();
+  DateTime? _sessionStart;
+
   SessionState status = SessionState.connected;
   bool isActive = false;
   bool isDemo = false;
+  bool isOnDevice = false;
+
+  /// In on-device mode the mic can't tell speakers apart, so the user tags the
+  /// currently-talking speaker; recognized speech is attributed to this.
+  Speaker activeSpeaker = Speaker.a;
   String? error;
 
   final List<TranscriptSegment> finalSegments = [];
@@ -68,6 +80,83 @@ class CallController extends ChangeNotifier {
       if (insight != null) _onMessage(InsightEvent(insight));
     });
     return true;
+  }
+
+  /// Start a fully on-device live analysis: the device's speech recognizer
+  /// transcribes the mic (Hebrew) and a local heuristic estimates emotion —
+  /// no backend, network, or API keys. Returns false if recognition is
+  /// unavailable (e.g. no recognition service / permission denied).
+  Future<bool> startOnDeviceCall() async {
+    if (isActive) return true;
+    _reset();
+    isOnDevice = true;
+    activeSpeaker = Speaker.a;
+    _sessionStart = DateTime.now();
+    _speech = SpeechService();
+
+    final ok = await _speech!.init(
+      onStatus: _onSpeechStatus,
+      onError: (e) {
+        // Transient recognizer errors (e.g. no_match) are expected; surface
+        // only as a soft note and keep the session going.
+        error = 'זיהוי דיבור: $e';
+        notifyListeners();
+      },
+    );
+    if (!ok) {
+      error =
+          'זיהוי דיבור אינו זמין במכשיר. ודא ששירות זיהוי הדיבור (Google) פעיל ושניתנה הרשאת מיקרופון.';
+      isOnDevice = false;
+      notifyListeners();
+      return false;
+    }
+
+    isActive = true;
+    status = SessionState.listening;
+    notifyListeners();
+    await _listenAgain();
+    return true;
+  }
+
+  double get _elapsed => _sessionStart == null
+      ? 0
+      : DateTime.now().difference(_sessionStart!).inMilliseconds / 1000.0;
+
+  Future<void> _listenAgain() async {
+    if (!isActive || _speech == null || _speech!.isListening) return;
+    try {
+      await _speech!.listen(onResult: _onSpeechResult);
+    } catch (_) {
+      // Ignore; the status listener will retry.
+    }
+  }
+
+  void _onSpeechStatus(String status) {
+    if (!isActive || !isOnDevice) return;
+    // The recognizer stops after each utterance/silence; restart for a
+    // continuous session.
+    if (status == 'done' || status == 'notListening') {
+      Future.delayed(const Duration(milliseconds: 300), _listenAgain);
+    }
+  }
+
+  void _onSpeechResult(String text, bool isFinal) {
+    final clean = text.trim();
+    if (clean.isEmpty) return;
+    final t = _elapsed;
+    _onMessage(TranscriptEvent(TranscriptSegment(
+      speaker: activeSpeaker,
+      text: clean,
+      isFinal: isFinal,
+      tStart: t,
+      tEnd: t,
+    )));
+    if (isFinal) {
+      final frame = _analyzer.analyze(speaker: activeSpeaker, text: clean, t: t);
+      _onMessage(EmotionEvent(frame));
+      final insight = _analyzer.insightFor(frame, clean, t);
+      if (insight != null) _onMessage(InsightEvent(insight));
+    }
   }
 
   /// Start a live microphone call. Returns false if mic permission was denied.
@@ -114,6 +203,19 @@ class CallController extends ChangeNotifier {
       notifyListeners();
       return;
     }
+    if (isOnDevice) {
+      isActive = false; // stops the listen-restart loop
+      await _speech?.stop();
+      status = SessionState.analyzing;
+      notifyListeners();
+      report = buildHeuristicReport(
+        [...historyA, ...historyB],
+        finalSegments,
+      );
+      status = SessionState.stopped;
+      notifyListeners();
+      return;
+    }
     await _audioSub?.cancel();
     _audioSub = null;
     await _capture.stop();
@@ -123,6 +225,12 @@ class CallController extends ChangeNotifier {
   }
 
   void swapSpeakers() {
+    if (isOnDevice) {
+      // No diarization on-device: flip which speaker new speech is tagged as.
+      activeSpeaker = activeSpeaker == Speaker.a ? Speaker.b : Speaker.a;
+      notifyListeners();
+      return;
+    }
     _client.swapSpeakers();
   }
 
@@ -153,6 +261,8 @@ class CallController extends ChangeNotifier {
   void _reset() {
     error = null;
     report = null;
+    isDemo = false;
+    isOnDevice = false;
     finalSegments.clear();
     interim.clear();
     latest.clear();
@@ -164,6 +274,7 @@ class CallController extends ChangeNotifier {
   @override
   void dispose() {
     _demoTimer?.cancel();
+    _speech?.cancel();
     _audioSub?.cancel();
     _msgSub?.cancel();
     _capture.dispose();

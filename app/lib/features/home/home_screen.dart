@@ -86,9 +86,9 @@ class _HomeScreenState extends ConsumerState<HomeScreen> {
     }
   }
 
-  void _openCall({required bool demo}) {
+  void _openCall(CallMode mode) {
     Navigator.of(context).push(
-      MaterialPageRoute(builder: (_) => CallScreen(demo: demo)),
+      MaterialPageRoute(builder: (_) => CallScreen(mode: mode)),
     );
   }
 
@@ -114,18 +114,27 @@ class _HomeScreenState extends ConsumerState<HomeScreen> {
                   style: TextStyle(color: Colors.white60)),
               const SizedBox(height: 40),
               FilledButton.icon(
-                onPressed: _analyzing ? null : () => _openCall(demo: true),
+                onPressed:
+                    _analyzing ? null : () => _openCall(CallMode.onDevice),
                 style: FilledButton.styleFrom(
                     padding: const EdgeInsets.symmetric(vertical: 18)),
-                icon: const Icon(Icons.play_circle_outline),
-                label: const Text('הדגמה חיה (על המכשיר)'),
+                icon: const Icon(Icons.mic),
+                label: const Text('ניתוח חי על המכשיר'),
               ),
               const SizedBox(height: 12),
               OutlinedButton.icon(
-                onPressed: _analyzing ? null : () => _openCall(demo: false),
+                onPressed: _analyzing ? null : () => _openCall(CallMode.demo),
                 style: OutlinedButton.styleFrom(
                     padding: const EdgeInsets.symmetric(vertical: 18)),
-                icon: const Icon(Icons.mic),
+                icon: const Icon(Icons.play_circle_outline),
+                label: const Text('הדגמה (נתונים מדומים)'),
+              ),
+              const SizedBox(height: 12),
+              OutlinedButton.icon(
+                onPressed: _analyzing ? null : () => _openCall(CallMode.live),
+                style: OutlinedButton.styleFrom(
+                    padding: const EdgeInsets.symmetric(vertical: 18)),
+                icon: const Icon(Icons.cloud_outlined),
                 label: const Text('שיחה חיה (דורש שרת)'),
               ),
               const SizedBox(height: 12),

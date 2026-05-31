@@ -35,6 +35,7 @@ class CallController extends ChangeNotifier {
   SpeechService? _speech;
   final OnDeviceAnalyzer _analyzer = OnDeviceAnalyzer();
   DateTime? _sessionStart;
+  int _speechTimeouts = 0;
 
   SessionState status = SessionState.connected;
   bool isActive = false;
@@ -96,12 +97,7 @@ class CallController extends ChangeNotifier {
 
     final ok = await _speech!.init(
       onStatus: _onSpeechStatus,
-      onError: (e) {
-        // Transient recognizer errors (e.g. no_match) are expected; surface
-        // only as a soft note and keep the session going.
-        error = 'זיהוי דיבור: $e';
-        notifyListeners();
-      },
+      onError: _onSpeechError,
     );
     if (!ok) {
       error =
@@ -140,6 +136,44 @@ class CallController extends ChangeNotifier {
     }
   }
 
+  // Recognizer errors that are normal during a session (silence, brief glitches)
+  // — we keep listening instead of surfacing them as a failure.
+  static const Set<String> _transientSpeechErrors = {
+    'error_speech_timeout',
+    'error_no_match',
+    'error_busy',
+    'error_recognizer_busy',
+    'error_client',
+    'error_audio_error',
+  };
+
+  void _onSpeechError(String code) {
+    if (!isActive || !isOnDevice) return;
+    if (_transientSpeechErrors.contains(code)) {
+      _speechTimeouts++;
+      // Only nudge the user if nothing has been recognized yet — most often
+      // because the mic is busy (e.g. an active phone call) or speech is too
+      // quiet/far.
+      error = (finalSegments.isEmpty && _speechTimeouts >= 2)
+          ? 'עדיין לא זוהה דיבור. אם אתה בשיחה טלפונית — המיקרופון תפוס; '
+              'נסה כשאינך בשיחה, ודבר קרוב וברור בעברית.'
+          : null;
+      notifyListeners();
+      Future.delayed(const Duration(milliseconds: 400), _listenAgain);
+      return;
+    }
+    if (code == 'error_language_unavailable' ||
+        code == 'error_language_not_supported') {
+      error = 'עברית אינה זמינה בזיהוי הדיבור במכשיר. התקן/הפעל חבילת שפה '
+          'עברית בשירות הזיהוי של Google.';
+    } else if (code == 'error_permission') {
+      error = 'הרשאת מיקרופון נדחתה. אפשר אותה בהגדרות → אפליקציות → EmotionCall.';
+    } else {
+      error = 'זיהוי דיבור נכשל: $code';
+    }
+    notifyListeners();
+  }
+
   void _onSpeechResult(String text, bool isFinal) {
     final clean = text.trim();
     if (clean.isEmpty) return;
@@ -152,6 +186,8 @@ class CallController extends ChangeNotifier {
       tEnd: t,
     )));
     if (isFinal) {
+      _speechTimeouts = 0;
+      if (error != null) error = null;
       final frame = _analyzer.analyze(speaker: activeSpeaker, text: clean, t: t);
       _onMessage(EmotionEvent(frame));
       final insight = _analyzer.insightFor(frame, clean, t);
@@ -263,6 +299,7 @@ class CallController extends ChangeNotifier {
     report = null;
     isDemo = false;
     isOnDevice = false;
+    _speechTimeouts = 0;
     finalSegments.clear();
     interim.clear();
     latest.clear();
